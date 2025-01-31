@@ -49,4 +49,4 @@ jobs:
         git pull --rebase
         git push
       env:
-        GITHUB_TOKEN: ${{ secrets.PAT }}  # Используем PAT вместо GITHUB_TOKEN
+        GITHUB_TOKEN: ${{ PAT }}  # Используем PAT вместо GITHUB_TOKEN
