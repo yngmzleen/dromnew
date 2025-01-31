@@ -58,7 +58,6 @@ def filter_and_save_items(api_url, output_file, filter_tag=None, existing_items=
         if filter_tag:
             rest_element = item.find(filter_tag)  # Ищем тег <rest_novosib3>
             if rest_element is not None:  # Товар с <rest_novosib3>
-                print(f"Поле {filter_tag} присутствует, товар сохраняется в файл {output_file}")
                 new_item = ET.SubElement(new_root, "item")
                 if status:  # Добавляем поле <status>, если оно задано
                     status_elem = ET.SubElement(new_item, "status")
