@@ -65,14 +65,17 @@ def filter_and_save_items(api_url, output_file, filter_tag=None, existing_items=
                 for tag, text in normalized_item.items():
                     new_elem = ET.SubElement(new_item, tag)
                     new_elem.text = text
-        else:  # Если filter_tag не задан, сохраняем все товары в output_file
-            new_item = ET.SubElement(new_root, "item")
-            if status:  # Добавляем поле <status>, если оно задано
-                status_elem = ET.SubElement(new_item, "status")
-                status_elem.text = status
-            for tag, text in normalized_item.items():
-                new_elem = ET.SubElement(new_item, tag)
-                new_elem.text = text
+        else:
+            # Если filter_tag не задан, проверяем, что товар не имеет <rest_novosib3>
+            rest_element = item.find("rest_novosib3")
+            if rest_element is None:  # Товар без <rest_novosib3>
+                new_item = ET.SubElement(new_root, "item")
+                if status:  # Добавляем поле <status>, если оно задано
+                    status_elem = ET.SubElement(new_item, "status")
+                    status_elem.text = status
+                for tag, text in normalized_item.items():
+                    new_elem = ET.SubElement(new_item, tag)
+                    new_elem.text = text
     
     tree = ET.ElementTree(new_root)
     tree.write(output_file, encoding="utf-8", xml_declaration=True)
