@@ -24,29 +24,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests
 
-    - name: Run zapaska_tyres.py
-      run: python zapaska_tyres.py
+    - name: Run tyres.py
+      run: python tyres.py
 
-    - name: Run zapaska_disk.py
-      run: python zapaska_disk.py
-
-    - name: Run 4tocki_tyres.py
-      run: python 4tocki_tyres.py
-
-    - name: Run 4tochki_disk.py
-      run: python 4tochki_disk.py
-
-    - name: Run brinex_tyres.py
-      run: python brinex_tyres.py
-
-    - name: Run brinex_disk.py
-      run: python brinex_disk.py
-
-    - name: Run brinex_gruz.py
-      run: python brinex_gruz.py
-
-    - name: Run zapaska_gruz.py
-      run: python zapaska_gruz.py
+    - name: Run disks.py
+      run: python disks.py
 
     - name: Check for changes
       id: changes
