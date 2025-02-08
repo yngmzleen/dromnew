@@ -17,7 +17,7 @@ def normalize_fields(item, source):
             "color": "color",
             "width": "width",
             "diameter": "diameter",
-            "img_big_my": "img_small",
+            "img_big_my": "img",
             "name": "name",
             "bolts_count": "holes",
             "bolts_spacing": "diam_holes",
