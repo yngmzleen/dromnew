@@ -22,7 +22,7 @@ def normalize_fields(item):
         "priceOpt": "opt",
         "price": "price",
         "spikes": "thorn",
-        "img_big_my": "img",
+        "img_big_my": "img_small",
         "proizvoditel": "brand"
     }
     
