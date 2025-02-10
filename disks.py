@@ -48,8 +48,14 @@ def normalize_fields(item, source):
     
     normalized_item = {}
     for elem in item:
+        # Если присутствует элемент img_big_my, пропускаем обработку img_small
+        if source == "4tochki" and elem.tag == "img_small" and item.find("img_big_my") is not None:
+            continue
         tag = field_map.get(elem.tag, elem.tag)
         normalized_item[tag] = elem.text if elem.text else ""
+        if elem.tag in ["img_big_my", "img_small"]:
+            print(f"Input tag: {elem.tag}, value: {elem.text}")
+            print(f"Output tag: {tag}, value: {normalized_item[tag]}")
     
     return normalized_item
 
