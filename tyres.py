@@ -1,3 +1,4 @@
+
 import requests
 import xml.etree.ElementTree as ET
 import re
@@ -43,7 +44,15 @@ def filter_and_save_items(api_url, output_file, filter_tag=None, existing_items=
 
     # Обрабатываем все товары в XML
     for item in root.findall(".//tires" if "4tochki" in api_url else ".//item"):
+        # Проверяем модель перед нормализацией
+        model_elem = item.find('categoryname')
+        is_lt610 = model_elem is not None and model_elem.text == 'LT610'
+        
         normalized_item = normalize_fields(item)  # Нормализуем поля товара
+        
+        # Если это модель LT610, добавляем или изменяем поле thorn
+        if is_lt610:
+            normalized_item['thorn'] = 'Липучка'
         cae = normalized_item.get("cae")
         unique_id = cae or normalized_item.get("article")
         if not unique_id:
@@ -66,6 +75,13 @@ def filter_and_save_items(api_url, output_file, filter_tag=None, existing_items=
                 for tag, text in normalized_item.items():
                     new_elem = ET.SubElement(new_item, tag)
                     new_elem.text = text
+                # Проверяем модель и добавляем/изменяем поле thorn после создания всех элементов
+                model_elem = new_item.find('model')
+                if model_elem is not None and model_elem.text == 'LT610':
+                    thorn_elem = new_item.find('thorn')
+                    if thorn_elem is None:
+                        thorn_elem = ET.SubElement(new_item, 'thorn')
+                    thorn_elem.text = 'Липучка'
         else:
             # Если filter_tag не задан, проверяем, что товар не имеет <rest_novosib3>
             rest_element = item.find("rest_novosib3")
@@ -77,6 +93,13 @@ def filter_and_save_items(api_url, output_file, filter_tag=None, existing_items=
                 for tag, text in normalized_item.items():
                     new_elem = ET.SubElement(new_item, tag)
                     new_elem.text = text
+                # Проверяем модель и добавляем/изменяем поле thorn после создания всех элементов
+                model_elem = new_item.find('model')
+                if model_elem is not None and model_elem.text == 'LT610':
+                    thorn_elem = new_item.find('thorn')
+                    if thorn_elem is None:
+                        thorn_elem = ET.SubElement(new_item, 'thorn')
+                    thorn_elem.text = 'Липучка'
     
     tree = ET.ElementTree(new_root)
     tree.write(output_file, encoding="utf-8", xml_declaration=True)
