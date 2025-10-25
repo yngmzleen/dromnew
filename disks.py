@@ -79,16 +79,7 @@ def process_items(api_url, source, filter_tag=None, status=None):
         if status:
             status_elem = ET.SubElement(new_item, "status")
             status_elem.text = status
-        
         for tag, text in normalized_item.items():
-            # ⬅ изменение: обработка розничных цен
-            if tag.endswith("_rozn"):
-                try:
-                    price = float(text)
-                    text = str(round(price * 1.05, 2))  # +5%
-                except (ValueError, TypeError):
-                    pass  # если значение не число, пропускаем
-
             new_elem = ET.SubElement(new_item, tag)
             new_elem.text = text
     
