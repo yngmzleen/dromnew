@@ -42,107 +42,73 @@ def _to_number(text: Optional[str]) -> Optional[float]:
     except ValueError:
         return None
 
-def adjust_retail_prices_plus10(root: ET.Element) -> None:
+def adjust_retail_prices_plus5(root: ET.Element) -> None:
     """
-    Проходит по всем <item> в root и увеличивает значения тегов *_rozn на 10%.
-    Если существует парный базовый тег без суффикса _rozn, берём его значение как оптовую цену.
-    Иначе увеличиваем текущее значение *_rozn.
+    Проходит по всем <item> в root и увеличивает значения тегов *_rozn на 5%.
+    Если существует парный базовый тег без суффикса _rozn, берёт его значение как базу.
+    Результат округляется до целого числа.
     """
     for item in root.findall(".//item"):
-        # Собираем карту тег -> элемент
-        tag_map = {}
-        for child in list(item):
-            tag_map[child.tag] = child
+        tag_map = {child.tag: child for child in list(item)}
         
         for tag, elem in tag_map.items():
             if tag.endswith("_rozn"):
-                base_tag = tag[:-5]  # срезаем "_rozn"
+                base_tag = tag[:-5]
                 base_elem = tag_map.get(base_tag)
                 
                 base_val = _to_number(base_elem.text) if base_elem is not None else None
                 rozn_val = _to_number(elem.text)
                 
-                # Приоритет: базовый (оптовый) тег, если он числовой; иначе текущее розничное значение
                 source_val = base_val if base_val is not None else rozn_val
                 if source_val is None:
-                    continue  # пропускаем неликвидные/нечисловые
+                    continue
                 
-                new_val = int(round(source_val * 1.10))
+                new_val = int(source_val * 1.05)  # округляем до целого
                 elem.text = str(new_val)
 
 def filter_and_save_items(api_url, output_file, filter_tag=None, existing_items=None,
-                          include_tag=None, include_value=None, status=None,
-                          postprocess_retail_10pct=False):
+                          include_tag=None, include_value=None, status=None):
     """Фильтрует товары, удаляет дубликаты, приводит поля к общему формату и сохраняет в XML-файл.
-       Если postprocess_retail_10pct=True — увеличивает все *_rozn на 10% (для tyres_gruz.xml)."""
+       После записи увеличивает все *_rozn на 5%."""
     root = fetch_xml(api_url)
-    if existing_items is None:
-        new_root = ET.Element("items")
-    else:
-        new_root = existing_items
+    new_root = existing_items if existing_items is not None else ET.Element("items")
 
-    # Обрабатываем все товары в XML
     for item in root.findall(".//tires" if "4tochki" in api_url else ".//item"):
-        # Проверяем модель перед нормализацией
         model_elem = item.find('categoryname')
         is_lt610 = model_elem is not None and model_elem.text == 'LT610'
         
-        normalized_item = normalize_fields(item)  # Нормализуем поля товара
+        normalized_item = normalize_fields(item)
         
-        # Если это модель LT610, добавляем или изменяем поле thorn
         if is_lt610:
             normalized_item['thorn'] = 'Липучка'
         cae = normalized_item.get("cae")
         unique_id = cae or normalized_item.get("article")
         if not unique_id:
             continue
-        
-        # Проверяем include_tag/include_value
+
         if include_tag and include_value:
             include_element = item.find(include_tag)
             if include_element is None or include_element.text != include_value:
-                continue  # Пропускаем
+                continue
 
-        # Если filter_tag задан — сохраняем только товары, у которых этот тег существует
-        if filter_tag:
-            rest_element = item.find(filter_tag)
-            if rest_element is not None:
-                new_item = ET.SubElement(new_root, "item")
-                if status:
-                    status_elem = ET.SubElement(new_item, "status")
-                    status_elem.text = status
-                for tag, text in normalized_item.items():
-                    new_elem = ET.SubElement(new_item, tag)
-                    new_elem.text = text
-                # LT610 -> thorn
-                model_elem_new = new_item.find('model')
-                if model_elem_new is not None and model_elem_new.text == 'LT610':
-                    thorn_elem = new_item.find('thorn')
-                    if thorn_elem is None:
-                        thorn_elem = ET.SubElement(new_item, 'thorn')
-                    thorn_elem.text = 'Липучка'
-        else:
-            # Если filter_tag не задан — исключаем товары с <rest_novosib3>
-            rest_element = item.find("rest_novosib3")
-            if rest_element is None:
-                new_item = ET.SubElement(new_root, "item")
-                if status:
-                    status_elem = ET.SubElement(new_item, "status")
-                    status_elem.text = status
-                for tag, text in normalized_item.items():
-                    new_elem = ET.SubElement(new_item, tag)
-                    new_elem.text = text
-                # LT610 -> thorn
-                model_elem_new = new_item.find('model')
-                if model_elem_new is not None and model_elem_new.text == 'LT610':
-                    thorn_elem = new_item.find('thorn')
-                    if thorn_elem is None:
-                        thorn_elem = ET.SubElement(new_item, 'thorn')
-                    thorn_elem.text = 'Липучка'
+        rest_element = item.find(filter_tag) if filter_tag else None
+        if (filter_tag and rest_element is not None) or (not filter_tag and item.find("rest_novosib3") is None):
+            new_item = ET.SubElement(new_root, "item")
+            if status:
+                status_elem = ET.SubElement(new_item, "status")
+                status_elem.text = status
+            for tag, text in normalized_item.items():
+                new_elem = ET.SubElement(new_item, tag)
+                new_elem.text = text
+            model_elem_new = new_item.find('model')
+            if model_elem_new is not None and model_elem_new.text == 'LT610':
+                thorn_elem = new_item.find('thorn')
+                if thorn_elem is None:
+                    thorn_elem = ET.SubElement(new_item, 'thorn')
+                thorn_elem.text = 'Липучка'
     
-    # Постобработка розничных цен для этого конкретного файла (если нужно)
-    if postprocess_retail_10pct:
-        adjust_retail_prices_plus10(new_root)
+    # Увеличиваем все *_rozn на 5% для этого файла
+    adjust_retail_prices_plus5(new_root)
 
     tree = ET.ElementTree(new_root)
     tree.write(output_file, encoding="utf-8", xml_declaration=True)
@@ -156,7 +122,7 @@ def main():
     ET.ElementTree(ET.Element("items")).write("tyres.xml", encoding="utf-8", xml_declaration=True)
     ET.ElementTree(ET.Element("items")).write("tyres_gruz.xml", encoding="utf-8", xml_declaration=True)
 
-    # Легковые (без rest_novosib3) -> tyres.xml
+    # Легковые (без rest_novosib3)
     existing_items = filter_and_save_items(
         url1, "tyres.xml",
         filter_tag=None,
@@ -164,7 +130,7 @@ def main():
         status="Под заказ"
     )
 
-    # Легковые (с rest_novosib3) -> tyres_nsk.xml
+    # Легковые (с rest_novosib3)
     filter_and_save_items(
         url1, "tyres_nsk.xml",
         filter_tag="rest_novosib3",
@@ -172,16 +138,15 @@ def main():
         status="В наличии"
     )
 
-    # Грузовые -> tyres_gruz.xml (и здесь делаем +10% для всех *_rozn)
+    # Грузовые
     filter_and_save_items(
         url1, "tyres_gruz.xml",
         filter_tag=None,
         include_tag="tiretype", include_value="Грузовая",
-        status="Под заказ",
-        postprocess_retail_10pct=True  # <<< ключевая опция
+        status="Под заказ"
     )
 
-    # Вторая выгрузка — добавляем к легковым в tyres.xml
+    # Вторая выгрузка (Brinex)
     filter_and_save_items(
         url2, "tyres.xml",
         filter_tag=None,
@@ -190,7 +155,7 @@ def main():
         status="Под заказ"
     )
 
-    print("XML файлы успешно созданы; в tyres_gruz.xml розничные цены *_rozn увеличены на 10%.")
+    print("✅ XML файлы успешно созданы; все *_rozn цены увеличены на 5% (округлены до целого).")
 
 if __name__ == "__main__":
     main()
