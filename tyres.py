@@ -44,27 +44,33 @@ def _to_number(text: Optional[str]) -> Optional[float]:
 
 def adjust_retail_prices_plus5(root: ET.Element) -> None:
     """
-    Проходит по всем <item> в root и увеличивает значения тегов *_rozn на 5%.
-    Если существует парный базовый тег без суффикса _rozn, берёт его значение как базу.
-    Результат округляется до целого числа.
+    Увеличивает значения всех тегов *_rozn на 5% от ИХ ЖЕ текущего значения.
+    Если *_rozn пустой/нечисловой — пробуем взять значение из парного базового тега без суффикса.
+    Результат округляется вниз до целого (int()).
     """
     for item in root.findall(".//item"):
         tag_map = {child.tag: child for child in list(item)}
-        
         for tag, elem in tag_map.items():
-            if tag.endswith("_rozn"):
+            if not tag.endswith("_rozn"):
+                continue
+
+            # 1) Пытаемся взять текущее retail-значение
+            rozn_val = _to_number(elem.text)
+
+            # 2) Если retail нечисловой — берём базовый тег (без "_rozn")
+            base_val = None
+            if rozn_val is None:
                 base_tag = tag[:-5]
                 base_elem = tag_map.get(base_tag)
-                
-                base_val = _to_number(base_elem.text) if base_elem is not None else None
-                rozn_val = _to_number(elem.text)
-                
-                source_val = base_val if base_val is not None else rozn_val
-                if source_val is None:
-                    continue
-                
-                new_val = int(source_val * 1.05)  # округляем до целого
-                elem.text = str(new_val)
+                if base_elem is not None:
+                    base_val = _to_number(base_elem.text)
+
+            source_val = rozn_val if rozn_val is not None else base_val
+            if source_val is None:
+                continue  # нечего повышать
+
+            new_val = int(source_val * 1.05)  # округление до целого вниз
+            elem.text = str(new_val)
 
 def filter_and_save_items(api_url, output_file, filter_tag=None, existing_items=None,
                           include_tag=None, include_value=None, status=None):
